@@ -28,13 +28,13 @@ public class StudentBackend {
         server.createContext("/api/students", new StudentApiHandler());
 
         server.setExecutor(null); // use default executor
-        server.start();
-        System.out.println("Server started at http://localhost:" + PORT);
+        server.start(); //starting the server
+        System.out.println("Server started at http://localhost:" + PORT); //printing the server address
     }
 
     private static void initDatabase() {
         try {
-            Class.forName("org.sqlite.JDBC");
+            Class.forName("org.sqlite.JDBC"); //loading the database driver
             try (Connection conn = DriverManager.getConnection(DB_URL);
                     Statement stmt = conn.createStatement()) {
                 System.out.println("Connecting to database: " + DB_URL + "...");
@@ -57,7 +57,7 @@ public class StudentBackend {
     // Static File Server Handler
     static class StaticHandler implements HttpHandler {
         @Override
-        public void handle(HttpExchange exchange) throws IOException {
+        public void handle(HttpExchange exchange) throws IOException { //handling the static files
             String path = exchange.getRequestURI().getPath();
             if (path.equals("/"))
                 path = "/index.html";
@@ -67,6 +67,7 @@ public class StudentBackend {
                 byte[] content = Files.readAllBytes(file.toPath());
                 String contentType = getContentType(path);
                 exchange.getResponseHeaders().set("Content-Type", contentType);
+                
                 exchange.sendResponseHeaders(200, content.length);
                 OutputStream os = exchange.getResponseBody();
                 os.write(content);
