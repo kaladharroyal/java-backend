@@ -20,13 +20,13 @@ public class StudentBackend {
 
         // Create HttpServer
         HttpServer server = HttpServer.create(new InetSocketAddress(PORT), 0);
-
+        //creating a server
         // Static File Handler
         server.createContext("/", new StaticHandler());
-
+        //  creating a static file handler
         // API Handlers
         server.createContext("/api/students", new StudentApiHandler());
-
+        //creating an API handler
         server.setExecutor(null); // use default executor
         server.start(); //starting the server
         System.out.println("Server started at http://localhost:" + PORT); //printing the server address
