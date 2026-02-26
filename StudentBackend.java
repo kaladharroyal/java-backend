@@ -10,8 +10,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class StudentBackend {
-    //creating a database connection
-    private static final String DB_URL = "jdbc:sqlite:students.db"; 
+    // creating a database connection
+    private static final String DB_URL = "jdbc:sqlite:students.db";
     private static final int PORT = 8080;
 
     public static void main(String[] args) throws IOException {
@@ -20,21 +20,21 @@ public class StudentBackend {
 
         // Create HttpServer
         HttpServer server = HttpServer.create(new InetSocketAddress(PORT), 0);
-        //creating a server
+        // creating a server
         // Static File Handler
         server.createContext("/", new StaticHandler());
-        //  creating a static file handler
+        // creating a static file handler
         // API Handlers
         server.createContext("/api/students", new StudentApiHandler());
-        //creating an API handler
+        // creating an API handler
         server.setExecutor(null); // use default executor
-        server.start(); //starting the server
-        System.out.println("Server started at http://localhost:" + PORT); //printing the server address
+        server.start(); // starting the server
+        System.out.println("Server started at http://localhost:" + PORT); // printing the server address
     }
 
     private static void initDatabase() {
         try {
-            Class.forName("org.sqlite.JDBC"); //loading the database driver
+            Class.forName("org.sqlite.JDBC"); // loading the database driver
             try (Connection conn = DriverManager.getConnection(DB_URL);
                     Statement stmt = conn.createStatement()) {
                 System.out.println("Connecting to database: " + DB_URL + "...");
@@ -57,7 +57,7 @@ public class StudentBackend {
     // Static File Server Handler
     static class StaticHandler implements HttpHandler {
         @Override
-        public void handle(HttpExchange exchange) throws IOException { //handling the static files
+        public void handle(HttpExchange exchange) throws IOException { // handling the static files
             String path = exchange.getRequestURI().getPath();
             if (path.equals("/"))
                 path = "/index.html";
@@ -67,7 +67,7 @@ public class StudentBackend {
                 byte[] content = Files.readAllBytes(file.toPath());
                 String contentType = getContentType(path);
                 exchange.getResponseHeaders().set("Content-Type", contentType);
-                
+
                 exchange.sendResponseHeaders(200, content.length);
                 OutputStream os = exchange.getResponseBody();
                 os.write(content);
@@ -103,6 +103,8 @@ public class StudentBackend {
                     handleGet(exchange);
                 } else if ("POST".equalsIgnoreCase(method)) {
                     handlePost(exchange);
+                } else if ("PUT".equalsIgnoreCase(method)) {
+                    handlePut(exchange);
                 } else if ("DELETE".equalsIgnoreCase(method)) {
                     handleDelete(exchange);
                 } else {
@@ -190,6 +192,60 @@ public class StudentBackend {
             os.close();
         }
 
+        private void handlePut(HttpExchange exchange) throws IOException, SQLException {
+            String body;
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(exchange.getRequestBody()))) {
+                body = reader.lines().collect(Collectors.joining("\n"));
+            }
+
+            // Parse JSON fields from request body
+            String reg = extractJsonValue(body, "register_number");
+            String name = extractJsonValue(body, "name");
+            String dept = extractJsonValue(body, "department");
+            String year = extractJsonValue(body, "year");
+            String phone = extractJsonValue(body, "phone");
+            String email = extractJsonValue(body, "email");
+
+            if (reg == null || reg.isEmpty()) {
+                String response = "Missing register_number for update";
+                exchange.sendResponseHeaders(400, response.length());
+                OutputStream os = exchange.getResponseBody();
+                os.write(response.getBytes());
+                os.close();
+                return;
+            }
+
+            System.out.println("PUT /api/students - Updating student: " + reg);
+            try (Connection conn = DriverManager.getConnection(DB_URL);
+                    // QUERY 5: Data Update - Updates an existing student record
+                    PreparedStatement pstmt = conn.prepareStatement(
+                            "UPDATE students SET name = ?, department = ?, year = ?, phone = ?, email = ? WHERE register_number = ?")) {
+                pstmt.setString(1, name);
+                pstmt.setString(2, dept);
+                pstmt.setString(3, year);
+                pstmt.setString(4, phone);
+                pstmt.setString(5, email);
+                pstmt.setString(6, reg);
+                int rowsUpdated = pstmt.executeUpdate();
+
+                if (rowsUpdated > 0) {
+                    System.out.println("Student record updated successfully.");
+                    String response = "Student updated successfully";
+                    exchange.sendResponseHeaders(200, response.length());
+                    OutputStream os = exchange.getResponseBody();
+                    os.write(response.getBytes());
+                    os.close();
+                } else {
+                    System.out.println("No student found with register number: " + reg);
+                    String response = "Student not found";
+                    exchange.sendResponseHeaders(404, response.length());
+                    OutputStream os = exchange.getResponseBody();
+                    os.write(response.getBytes());
+                    os.close();
+                }
+            }
+        }
+
         private void handleDelete(HttpExchange exchange) throws SQLException, IOException {
             String query = exchange.getRequestURI().getQuery();
             String id = null;
@@ -212,7 +268,7 @@ public class StudentBackend {
                     // Number)
                     PreparedStatement pstmt = conn.prepareStatement("DELETE FROM students WHERE register_number = ?")) {
                 pstmt.setString(1, id);
-                pstmt.executeUpdate();
+                pstmt.executeUpdate(); // execute the update
                 System.out.println("Student record deleted successfully.");
             }
 

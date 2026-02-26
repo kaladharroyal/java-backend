@@ -263,3 +263,84 @@ td {
     font-weight: 600;
     color: var(--primary);
 }
+
+/* Edit Button */
+.edit-btn {
+    color: var(--primary);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+    margin-right: 0.75rem;
+}
+
+.edit-btn:hover {
+    text-decoration: underline;
+}
+
+/* Update Button */
+.update-btn {
+    background: var(--success) !important;
+}
+
+.update-btn:hover {
+    background: #16a34a !important;
+}
+
+/* Cancel Button */
+.cancel-btn {
+    background: none;
+    color: var(--danger);
+    border: 1px solid var(--danger);
+    padding: 0.75rem 2rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-left: 1rem;
+    transition: all 0.2s;
+}
+
+.cancel-btn:hover {
+    background: var(--danger);
+    color: white;
+}
+
+/* Search Bar */
+.search-bar {
+    margin-bottom: 1rem;
+}
+
+.search-bar label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.search-row {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.search-row input {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.search-row input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+/* Readonly Input */
+.readonly-input {
+    background: #f1f5f9 !important;
+    color: var(--text-muted) !important;
+    cursor: not-allowed;
+}

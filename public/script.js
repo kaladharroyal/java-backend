@@ -90,8 +90,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${s.name}</td>
                 <td>${s.department}</td>
                 <td>${s.year}</td>
+                <td>${s.phone}</td>
+                <td>${s.email}</td>
                 <td>
-                    <!-- Link the delete button to the global delete function -->
+                    <button class="edit-btn" onclick="editStudent('${s.register_number}')">Edit</button>
                     <button class="delete-btn" onclick="deleteStudent('${s.register_number}')">Delete</button>
                 </td>
             `;
@@ -106,6 +108,81 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Refresh Button Listener
     document.getElementById('refresh-btn').addEventListener('click', fetchStudents);
+
+    // === UPDATE STUDENT LOGIC ===
+
+    // Search button: Find a student by register number and fill the update form
+    document.getElementById('search-btn').addEventListener('click', async () => {
+        const reg = document.getElementById('searchReg').value.trim();
+        if (!reg) {
+            alert('Please enter a register number');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/students');
+            const students = await response.json();
+            const student = students.find(s => s.register_number === reg);
+
+            if (student) {
+                // Fill the update form with the student's current data
+                document.getElementById('updateRegNum').value = student.register_number;
+                document.getElementById('updateName').value = student.name;
+                document.getElementById('updateDept').value = student.department;
+                document.getElementById('updateYear').value = student.year;
+                document.getElementById('updatePhone').value = student.phone;
+                document.getElementById('updateEmail').value = student.email;
+                document.getElementById('update-form').style.display = 'block';
+            } else {
+                alert('Student not found with register number: ' + reg);
+                document.getElementById('update-form').style.display = 'none';
+            }
+        } catch (err) {
+            alert('Failed to connect to server');
+        }
+    });
+
+    // Cancel button: Hide the update form
+    document.getElementById('cancel-update-btn').addEventListener('click', () => {
+        document.getElementById('update-form').style.display = 'none';
+        document.getElementById('searchReg').value = '';
+    });
+
+    // Update form submission: Send PUT request
+    const updateForm = document.getElementById('update-form');
+    updateForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const student = {
+            register_number: document.getElementById('updateRegNum').value,
+            name: document.getElementById('updateName').value,
+            department: document.getElementById('updateDept').value,
+            year: document.getElementById('updateYear').value,
+            phone: document.getElementById('updatePhone').value,
+            email: document.getElementById('updateEmail').value
+        };
+
+        try {
+            // API CALL: Send a PUT request to '/api/students' with updated data
+            const response = await fetch('/api/students', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(student)
+            });
+
+            if (response.ok) {
+                alert('Student updated successfully!');
+                updateForm.style.display = 'none';
+                document.getElementById('searchReg').value = '';
+                fetchStudents(); // Refresh the list
+            } else {
+                const error = await response.text();
+                alert('Error: ' + error);
+            }
+        } catch (err) {
+            alert('Failed to connect to server');
+        }
+    });
 
     // Initial Load: Populates data as soon as the website opens
     fetchStudents();
@@ -130,5 +207,48 @@ async function deleteStudent(regNum) {
         }
     } catch (err) {
         alert('Error connecting to server');
+    }
+}
+
+// === EDIT STUDENT (called from table Edit button) ===
+// This function navigates to the Update Student view and pre-fills the form
+async function editStudent(regNum) {
+    // Switch to the Update Student view
+    const navButtons = document.querySelectorAll('.nav-btn');
+    const views = document.querySelectorAll('.view');
+    const pageTitle = document.getElementById('page-title');
+
+    navButtons.forEach(b => b.classList.remove('active'));
+    views.forEach(v => v.classList.remove('active'));
+
+    // Activate the update-student nav button and view
+    navButtons.forEach(b => {
+        if (b.getAttribute('data-target') === 'update-student') {
+            b.classList.add('active');
+        }
+    });
+    document.getElementById('update-student').classList.add('active');
+    pageTitle.textContent = 'Update Student';
+
+    // Set the register number in the search field
+    document.getElementById('searchReg').value = regNum;
+
+    // Fetch the student data and fill the form
+    try {
+        const response = await fetch('/api/students');
+        const students = await response.json();
+        const student = students.find(s => s.register_number === regNum);
+
+        if (student) {
+            document.getElementById('updateRegNum').value = student.register_number;
+            document.getElementById('updateName').value = student.name;
+            document.getElementById('updateDept').value = student.department;
+            document.getElementById('updateYear').value = student.year;
+            document.getElementById('updatePhone').value = student.phone;
+            document.getElementById('updateEmail').value = student.email;
+            document.getElementById('update-form').style.display = 'block';
+        }
+    } catch (err) {
+        alert('Failed to load student data');
     }
 }

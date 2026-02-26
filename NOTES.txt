@@ -19,7 +19,7 @@
     3. JDBC (Java Database Connectivity)
        - DriverManager.getConnection() to connect to database
        - Statement for simple queries (SELECT, CREATE TABLE)
-       - PreparedStatement for parameterized queries (INSERT, DELETE)
+       - PreparedStatement for parameterized queries (INSERT, UPDATE, DELETE)
        - ResultSet to iterate over query results
        - try-with-resources for automatic resource closing
 
@@ -44,7 +44,7 @@
     1. fetch() API
        - Modern way to make HTTP requests from the browser
        - Returns a Promise, used with async/await
-       - Supports GET, POST, DELETE and other HTTP methods
+       - Supports GET, POST, PUT, DELETE and other HTTP methods
 
     2. async/await
        - Used to handle asynchronous API calls
@@ -61,7 +61,7 @@
        - DOMContentLoaded event for page load
        - click event on navigation buttons
        - submit event on the form
-       - onclick attribute on delete buttons
+       - onclick attribute on edit and delete buttons
 
     5. Template Literals
        - Backtick strings with ${variable} syntax
@@ -79,7 +79,7 @@
 
     Purpose:
     A web-based application to manage student records. The admin can
-    Add, View, and Delete student details such as Register Number,
+    Add, View, Update, and Delete student details such as Register Number,
     Name, Department, Year, Phone, and Email.
 
 
@@ -153,7 +153,7 @@
         B. Serves frontend static files (HTML/CSS/JS)
         C. Handles API requests (CRUD operations on student data)
 
-    --- 7A. SERVER SETUP (main method, lines 17-33) ---
+    --- 7A. SERVER SETUP (main method) ---
 
         - Creates an HttpServer on port 8080
         - Registers TWO route handlers:
@@ -161,25 +161,23 @@
             2. "/api/students"  --> StudentApiHandler (handles data operations)
         - Starts the server and prints the URL to the console
 
-    --- 7B. DATABASE INITIALIZATION (initDatabase method, lines 35-55) ---
+    --- 7B. DATABASE INITIALIZATION (initDatabase method) ---
 
         - Loads the SQLite JDBC driver: Class.forName("org.sqlite.JDBC")
         - Connects to the database file: jdbc:sqlite:students.db
         - Creates the "students" table if it doesn't already exist
 
         SQL QUERY 1 - CREATE TABLE:
-        ┌─────────────────────────────────────────────────────────────────┐
-        │  CREATE TABLE IF NOT EXISTS students (                         │
-        │      register_number TEXT PRIMARY KEY,                         │
-        │      name TEXT,                                                │
-        │      department TEXT,                                          │
-        │      year TEXT,                                                │
-        │      phone TEXT,                                               │
-        │      email TEXT                                                │
-        │  )                                                             │
-        └─────────────────────────────────────────────────────────────────┘
+            CREATE TABLE IF NOT EXISTS students (
+                register_number TEXT PRIMARY KEY,
+                name TEXT,
+                department TEXT,
+                year TEXT,
+                phone TEXT,
+                email TEXT
+            )
 
-    --- 7C. STATIC FILE HANDLER (StaticHandler class, lines 58-93) ---
+    --- 7C. STATIC FILE HANDLER (StaticHandler class) ---
 
         Purpose: Serves the frontend files from the "public/" folder.
 
@@ -193,28 +191,27 @@
         - Sends the file content back to the browser
         - Returns 404 if the file is not found
 
-    --- 7D. API HANDLER (StudentApiHandler class, lines 96-231) ---
+    --- 7D. API HANDLER (StudentApiHandler class) ---
 
-        Purpose: Handles all CRUD (Create, Read, Delete) operations.
+        Purpose: Handles all CRUD (Create, Read, Update, Delete) operations.
 
         The handler checks the HTTP method and routes to the right function:
             GET    --> handleGet()    (fetch all students)
             POST   --> handlePost()   (add a new student)
+            PUT    --> handlePut()    (update a student)
             DELETE --> handleDelete() (remove a student)
             Other  --> 405 Method Not Allowed
 
-        ── handleGet() (lines 121-146) ──
+        -- handleGet() --
             - Connects to SQLite database
             - Runs SELECT query to get all students
             - Builds a JSON array string manually
             - Sends the JSON response back to frontend
 
             SQL QUERY 2 - SELECT ALL:
-            ┌──────────────────────────────────┐
-            │  SELECT * FROM students          │
-            └──────────────────────────────────┘
+                SELECT * FROM students
 
-        ── handlePost() (lines 148-191) ──
+        -- handlePost() --
             - Reads the JSON body from the request
             - Extracts each field (register_number, name, dept, year, phone, email)
             - Validates that register_number and name are present
@@ -222,59 +219,70 @@
             - Sends success/error message back
 
             SQL QUERY 3 - INSERT:
-            ┌──────────────────────────────────────────────────┐
-            │  INSERT INTO students VALUES (?, ?, ?, ?, ?, ?)  │
-            │  Parameters: reg, name, dept, year, phone, email │
-            └──────────────────────────────────────────────────┘
+                INSERT INTO students VALUES (?, ?, ?, ?, ?, ?)
+                Parameters: reg, name, dept, year, phone, email
 
-        ── handleDelete() (lines 193-224) ──
+        -- handlePut() --
+            - Reads the JSON body from the request
+            - Extracts each field (register_number, name, dept, year, phone, email)
+            - Validates that register_number is present (used as the WHERE key)
+            - Updates the existing student record in the database
+            - Returns 404 if no student found with that register number
+            - Sends success/error message back
+
+            SQL QUERY 5 - UPDATE:
+                UPDATE students SET name = ?, department = ?, year = ?,
+                    phone = ?, email = ? WHERE register_number = ?
+                Parameters: name, dept, year, phone, email, register_number
+
+        -- handleDelete() --
             - Reads the "id" from the URL query string (?id=2024CS01)
             - Validates the id is present
             - Deletes the matching record from the database
             - Sends success/error message back
 
             SQL QUERY 4 - DELETE:
-            ┌──────────────────────────────────────────────────────────────┐
-            │  DELETE FROM students WHERE register_number = ?             │
-            │  Parameter: id (the register number from URL)               │
-            └──────────────────────────────────────────────────────────────┘
+                DELETE FROM students WHERE register_number = ?
+                Parameter: id (the register number from URL)
 
-        ── extractJsonValue() (lines 226-230) ──
+        -- extractJsonValue() --
             - A helper method to parse JSON manually using regex
             - Pattern: "key":"value" --> extracts the value
-            - Used by handlePost() to read form data from the request body
+            - Used by handlePost() and handlePut() to read form data from the request body
 
 
 8. FRONTEND EXPLANATION
 ================================================================================
 
-    --- 6A. index.html (public/index.html) ---
+    --- 8A. index.html (public/index.html) ---
 
         Structure:
-        ┌─────────────────────────────────────────────────────────────┐
-        │  <body>                                                     │
-        │  ├── <div class="container">                                │
-        │  │   ├── <aside class="sidebar">      --> Left Navigation   │
-        │  │   │   ├── Logo: "EduAdmin"                               │
-        │  │   │   ├── Button: Dashboard                              │
-        │  │   │   ├── Button: Add Student                            │
-        │  │   │   └── Button: All Students                           │
-        │  │   │                                                      │
-        │  │   └── <main class="content">       --> Right Content     │
-        │  │       ├── <header>                 --> Page Title + User  │
-        │  │       ├── <section id="dashboard">     --> Dashboard     │
-        │  │       │   └── Total Students Count Card                  │
-        │  │       ├── <section id="add-student">   --> Add Form      │
-        │  │       │   └── Form with 6 input fields                   │
-        │  │       └── <section id="view-students"> --> Student Table  │
-        │  │           └── Table with Reg, Name, Dept, Year, Actions  │
-        │  └── <script src="script.js">                               │
-        └─────────────────────────────────────────────────────────────┘
+            <body>
+            +-- <div class="container">
+            |   +-- <aside class="sidebar">      --> Left Navigation
+            |   |   +-- Logo: "EduAdmin"
+            |   |   +-- Button: Dashboard
+            |   |   +-- Button: Add Student
+            |   |   +-- Button: Update Student
+            |   |   +-- Button: All Students
+            |   |
+            |   +-- <main class="content">       --> Right Content
+            |       +-- <header>                 --> Page Title + User
+            |       +-- <section id="dashboard">     --> Dashboard
+            |       |   +-- Total Students Count Card
+            |       +-- <section id="add-student">   --> Add Form
+            |       |   +-- Form with 6 input fields
+            |       +-- <section id="update-student"> --> Update Form
+            |       |   +-- Search bar + Pre-filled form with 6 fields
+            |       +-- <section id="view-students"> --> Student Table
+            |           +-- Table with Reg, Name, Dept, Year, Phone, Email, Actions
+            +-- <script src="script.js">
 
-        Three Views (only one visible at a time):
-            1. Dashboard     - Shows total student count
-            2. Add Student   - Form to register a new student
-            3. All Students  - Table listing all students with Delete button
+        Four Views (only one visible at a time):
+            1. Dashboard      - Shows total student count
+            2. Add Student    - Form to register a new student
+            3. Update Student - Search by Register Number and update details
+            4. All Students   - Table listing all students with Edit & Delete buttons
 
         Student Form Fields:
             - Register Number (text, required)
@@ -284,11 +292,11 @@
             - Phone Number    (tel)
             - Email Address   (email)
 
-    --- 6B. script.js (public/script.js) ---
+    --- 8B. script.js (public/script.js) ---
 
         This file handles ALL the interactivity and API communication.
 
-        PART 1: NAVIGATION LOGIC (lines 1-28)
+        PART 1: NAVIGATION LOGIC
             - Selects all nav buttons and view sections
             - On button click:
                 1. Highlights the clicked button (adds 'active' class)
@@ -296,7 +304,7 @@
                 3. Updates the page title in the header
                 4. Triggers fetchStudents() when switching to Dashboard or Student List
 
-        PART 2: ADD STUDENT - POST API CALL (lines 30-64)
+        PART 2: ADD STUDENT - POST API CALL
             - Listens for form submit event
             - Collects all 6 field values into a JavaScript object
             - Sends a POST request to /api/students with JSON body
@@ -309,7 +317,7 @@
                 body: JSON.stringify(student)
             });
 
-        PART 3: FETCH STUDENTS - GET API CALL (lines 67-79)
+        PART 3: FETCH STUDENTS - GET API CALL
             - Sends a GET request to /api/students
             - Receives JSON array of all students
             - Calls updateTable() to build the HTML table
@@ -317,16 +325,28 @@
 
             fetch('/api/students')
 
-        PART 4: UPDATE TABLE (lines 82-100)
+        PART 4: UPDATE TABLE
             - Clears the existing table rows
             - Loops through the student array
             - Creates a new <tr> row for each student
-            - Each row has: Reg No, Name, Dept, Year, Delete Button
+            - Each row has: Reg No, Name, Dept, Year, Phone, Email, Edit Button, Delete Button
 
-        PART 5: UPDATE DASHBOARD (lines 103-105)
+        PART 5: UPDATE DASHBOARD
             - Sets the total student count on the dashboard card
 
-        PART 6: DELETE STUDENT - DELETE API CALL (lines 116-134)
+        PART 6: UPDATE STUDENT LOGIC
+            - Search button: fetches all students and finds the one matching the register number
+            - Pre-fills the update form with the student's current data
+            - On form submit: sends a PUT request to /api/students with updated JSON
+            - Cancel button: hides the update form
+
+            fetch('/api/students', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(student)
+            });
+
+        PART 7: DELETE STUDENT - DELETE API CALL
             - This function is GLOBAL (outside DOMContentLoaded)
             - Called when the Delete button in the table is clicked
             - Shows a confirmation dialog
@@ -335,7 +355,14 @@
 
             fetch(`/api/students?id=${regNum}`, { method: 'DELETE' })
 
-    --- 6C. style.css (public/style.css) ---
+        PART 8: EDIT STUDENT (GLOBAL)
+            - This function is GLOBAL (outside DOMContentLoaded)
+            - Called when the Edit button in the table is clicked
+            - Switches to the Update Student view
+            - Pre-fills the search field and triggers the update form
+            - Fetches and fills all fields for the selected student
+
+    --- 8C. style.css (public/style.css) ---
 
         - Modern dark theme with gradient backgrounds
         - Sidebar navigation with hover effects
@@ -343,37 +370,39 @@
         - Responsive form grid (2-column layout)
         - Styled table with hover effects
         - Custom button styles with animations
+        - Edit button (indigo), Update button (green), Cancel button (red)
+        - Search bar with inline button layout
+        - Readonly input styling for non-editable fields
         - Google Font "Outfit" for clean typography
 
 
-9. FRONTEND ←→ BACKEND CONNECTION (API FLOW)
+9. FRONTEND <-> BACKEND CONNECTION (API FLOW)
 ================================================================================
 
     The frontend and backend are connected through HTTP API calls.
     The frontend uses JavaScript fetch() to talk to the backend.
     All requests go to the SAME server (localhost:8080).
 
-    ┌──────────────────────────────────────────────────────────────────────────┐
-    │                                                                          │
-    │   Browser (localhost:8080)                                               │
-    │       │                                                                  │
-    │       ├── GET /               ► StaticHandler                            │
-    │       │                         ► serves index.html, style.css, script.js│
-    │       │                                                                  │
-    │       ├── GET /api/students   ► StudentApiHandler.handleGet()            │
-    │       │                         ► SQLite DB ► JSON array response        │
-    │       │                                                                  │
-    │       ├── POST /api/students  ► StudentApiHandler.handlePost()           │
-    │       │                         ► SQLite DB ► success/error message      │
-    │       │                                                                  │
-    │       └── DELETE /api/students?id=...                                    │
-    │                               ► StudentApiHandler.handleDelete()         │
-    │                                 ► SQLite DB ► success/error message      │
-    │                                                                          │
-    └──────────────────────────────────────────────────────────────────────────┘
+    Browser (localhost:8080)
+        |
+        +-- GET /               > StaticHandler
+        |                         > serves index.html, style.css, script.js
+        |
+        +-- GET /api/students   > StudentApiHandler.handleGet()
+        |                         > SQLite DB > JSON array response
+        |
+        +-- POST /api/students  > StudentApiHandler.handlePost()
+        |                         > SQLite DB > success/error message
+        |
+        +-- PUT /api/students   > StudentApiHandler.handlePut()
+        |                         > SQLite DB > success/error message
+        |
+        +-- DELETE /api/students?id=...
+                                > StudentApiHandler.handleDelete()
+                                  > SQLite DB > success/error message
 
     COMPLETE FLOW - ADDING A STUDENT:
-    ──────────────────────────────────
+    ----------------------------------
     1. User fills the form in index.html and clicks "Save Student"
     2. script.js collects the form data into a JSON object
     3. script.js sends: POST /api/students with JSON body
@@ -386,7 +415,7 @@
     10. script.js calls fetchStudents() to refresh the table
 
     COMPLETE FLOW - VIEWING STUDENTS:
-    ──────────────────────────────────
+    ----------------------------------
     1. Page loads OR user clicks "All Students" or "Dashboard"
     2. script.js sends: GET /api/students
     3. StudentBackend receives the request in StudentApiHandler.handle()
@@ -398,8 +427,21 @@
     9. script.js calls updateTable() to build HTML rows in the table
     10. script.js calls updateDashboard() to update the count
 
+    COMPLETE FLOW - UPDATING A STUDENT:
+    ------------------------------------
+    1. User clicks "Edit" next to a student OR goes to "Update Student" page
+    2. script.js pre-fills the update form with the student's current data
+    3. User modifies the fields and clicks "Update Student"
+    4. script.js sends: PUT /api/students with JSON body
+    5. StudentBackend receives the request in StudentApiHandler.handle()
+    6. It sees method = "PUT", so it calls handlePut()
+    7. handlePut() reads the JSON body, extracts each field
+    8. handlePut() connects to SQLite and runs UPDATE query
+    9. handlePut() sends back "Student updated successfully"
+    10. script.js receives the response, shows an alert, refreshes the list
+
     COMPLETE FLOW - DELETING A STUDENT:
-    ────────────────────────────────────
+    ------------------------------------
     1. User clicks "Delete" button next to a student in the table
     2. script.js shows a confirmation dialog
     3. script.js sends: DELETE /api/students?id=2024CS01
@@ -424,17 +466,17 @@
             email TEXT
         )
 
-        Location: initDatabase() method, line 43
+        Location: initDatabase() method
 
     Query 2 - SELECT ALL (Fetch Students):
 
         SELECT * FROM students
 
-        Location: handleGet() method, line 127
+        Location: handleGet() method
 
     Query 3 - INSERT (Add Student):
         INSERT INTO students VALUES (?, ?, ?, ?, ?, ?)
-        Location: handlePost() method, line 175
+        Location: handlePost() method
 
         Uses PreparedStatement to prevent SQL injection
 
@@ -442,10 +484,15 @@
 
         DELETE FROM students WHERE register_number = ?
 
-        Location: handleDelete() method, line 213
+        Location: handleDelete() method
         Uses PreparedStatement to prevent SQL injection
 
+    Query 5 - UPDATE (Update Student):
+        UPDATE students SET name = ?, department = ?, year = ?,
+            phone = ?, email = ? WHERE register_number = ?
 
+        Location: handlePut() method
+        Uses PreparedStatement to prevent SQL injection
 
 
 
